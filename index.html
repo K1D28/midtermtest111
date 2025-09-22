@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notes App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    #noteTitle {
+      width: 80%;
+      padding: 10px;
+      font-size: 1.2em;
+    }
+    #noteContent {
+      width: 80%;
+      padding: 10px;
+      height: 100px;
+    }
+    .note {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Notes App</h1>
+  <form id="noteForm">
+    <input type="text" id="noteTitle" placeholder="Title" required>
+    <textarea id="noteContent" placeholder="Content" required></textarea>
+    <button type="submit">Add Note</button>
+  </form>
+  <div id="notesList"></div>
+  <script src="./notesApp.js"></script>
+  <script>
+    const app = new NotesApp();
+    const form = document.getElementById('noteForm');
+    const notesList = document.getElementById('notesList');
+
+    async function fetchNotes() {
+      const response = await fetch('/api/notes');
+      return response.json();
+    }
+
+    async function addNoteToServer(title, content) {
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content }),
+      });
+      return response.ok;
+    }
+
+    async function renderNotes() {
+      const notes = await fetchNotes();
+      notesList.innerHTML = '';
+      notes.forEach(note => {
+        const noteDiv = document.createElement('div');
+        noteDiv.className = 'note';
+        noteDiv.innerHTML = `<strong>${note.title}</strong><br>${note.content}<br><small>${new Date(note.timestamp).toLocaleString()}</small>`;
+        notesList.appendChild(noteDiv);
+      });
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('noteTitle').value;
+      const content = document.getElementById('noteContent').value;
+      if (await addNoteToServer(title, content)) {
+        form.reset();
+        renderNotes();
+      }
+    });
+
+    renderNotes();
+  </script>
+</body>
+</html>
