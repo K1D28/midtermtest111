@@ -4,45 +4,48 @@ const path = require('path');
 
 const app = express();
 const PORT = 3000;
-const DATA_FILE = path.join(__dirname, 'notesData.json');
-
-let notes = [];
 
 // Middleware
 app.use(express.json());
-app.use(express.static(__dirname));
 
-// Load notes from file
+// File path for storing notes
+const NOTES_FILE = path.join(__dirname, 'notes.json');
+
+// Load notes from file or initialize an empty array
 function loadNotes() {
-  if (fs.existsSync(DATA_FILE)) {
-    const data = fs.readFileSync(DATA_FILE, 'utf-8');
-    notes = JSON.parse(data);
+  if (fs.existsSync(NOTES_FILE)) {
+    const data = fs.readFileSync(NOTES_FILE, 'utf-8');
+    return JSON.parse(data);
   }
+  return [];
 }
 
 // Save notes to file
-function saveNotes() {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(notes, null, 2));
+function saveNotes(notes) {
+  fs.writeFileSync(NOTES_FILE, JSON.stringify(notes, null, 2));
 }
 
-// Routes
-app.get('/api/notes', (req, res) => {
-  res.json(notes);
+// In-memory notes array
+let notes = loadNotes();
+
+// API to get all notes (reverse chronological order)
+app.get('/notes', (req, res) => {
+  res.json(notes.sort((a, b) => b.timestamp - a.timestamp));
 });
 
-app.post('/api/notes', (req, res) => {
+// API to add a new note
+app.post('/notes', (req, res) => {
   const { title, content } = req.body;
-  if (!title.trim() && !content.trim()) {
-    return res.status(400).json({ error: 'Cannot save an empty note.' });
+  if (!title || !content) {
+    return res.status(400).json({ error: 'Title and content are required.' });
   }
-  const newNote = { title, content, timestamp: new Date().toISOString() };
-  notes.unshift(newNote); // Add to the beginning for reverse chronological order
-  saveNotes();
+  const newNote = { title, content, timestamp: Date.now() };
+  notes.push(newNote);
+  saveNotes(notes);
   res.status(201).json(newNote);
 });
 
-// Start server
+// Start the server
 app.listen(PORT, () => {
-  loadNotes();
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
